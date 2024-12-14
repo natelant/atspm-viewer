@@ -4,7 +4,8 @@
 import pandas as pd
 import requests
 import json
-from datetime import timedelta
+from datetime import timedelta, datetime
+import plotly.graph_objects as go
 
 def fetch_tmc_data(signal_ids, start_date, end_date):
     # Fetch the data from the ATSPM API
@@ -125,6 +126,57 @@ def fetch_tmc_data(signal_ids, start_date, end_date):
 
 
 
+def generate_bar_chart(df, start_time, end_time):
+    # Convert string times to datetime.time objects
+    if isinstance(start_time, str):
+        start_time = datetime.strptime(start_time, '%H:%M:%S').time()
+    if isinstance(end_time, str):
+        end_time = datetime.strptime(end_time, '%H:%M:%S').time()
+
+    # create a day column that has the date without the time
+    df['day'] = df['timestamp'].dt.date
+    # create a time column that has the time without the date
+    df['time'] = df['timestamp'].dt.time
+    
+    # filter by start and end time
+    df = df[(df['time'] >= start_time) & (df['time'] <= end_time)]
+    
+    # Calculate the average count grouped by the specified columns
+    daily_counts = df.groupby(['locationIdentifier', 'direction', 'movementType', 'planDescription', 'day'])['count'].sum().reset_index()
+    avg_counts = daily_counts.groupby(['locationIdentifier', 'direction', 'movementType', 'planDescription'])['count'].mean().reset_index()
+
+    # testing
+    # write df to csv
+    df.to_csv('testing/df.csv', index=False)
+    avg_counts.to_csv('testing/avg_counts.csv', index=False)
+    
+    # Create the bar chart
+    fig = go.Figure()
+    
+    # Add traces for each movement type instead of direction
+    for movement in avg_counts['movementType'].unique():
+        movement_data = avg_counts[avg_counts['movementType'] == movement]
+        
+        fig.add_trace(
+            go.Bar(
+                name=movement,
+                x=[f"{loc} - {dir}" for loc, dir in zip(movement_data['locationIdentifier'], movement_data['direction'])],
+                y=movement_data['count']
+            )
+        )
+    
+    # Update layout
+    fig.update_layout(
+        barmode='group',
+        title='Average Turning Movement Counts',
+        xaxis_title='Intersection - Direction',
+        yaxis_title='Average Count',
+        legend_title='Movement Type',
+        height=600,
+        showlegend=True
+    )
+    
+    return fig
 
 
 # -------------------------------------------------------------------------------------------------
@@ -132,3 +184,6 @@ def fetch_tmc_data(signal_ids, start_date, end_date):
 
 df = fetch_tmc_data(signal_ids=[7115, 7116], start_date='2024-11-06', end_date='2024-11-08')
 print(df)
+
+fig = generate_bar_chart(df, start_time='14:00:00', end_time='18:00:00')
+fig.show()

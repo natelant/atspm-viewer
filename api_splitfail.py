@@ -97,5 +97,5 @@ def fetch_splitfail_data(signal_ids, start_date, end_date):
 # -------------------------------------------------------------------------------------------------
 # Example usage
 
-df = fetch_splitfail_data(signal_ids=[7115], start_date='2024-11-06', end_date='2024-11-08')
-print(df)
+# df = fetch_splitfail_data(signal_ids=[7115], start_date='2024-11-06', end_date='2024-11-08')
+# print(df)
